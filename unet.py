@@ -172,17 +172,17 @@ class CrossAttention(nn.Module):
             nn.Linear(inner_dim, query_dim),
             nn.Dropout(dropout)
         )
-
+    # x: (BS,320,8,64) context= (BS,320,10) or (BS,320,8,64) 
     def forward(self, x, context=None, mask=None):
         h = self.heads
-        q = self.to_q(x)
-        context = default(context, x)
+        q = self.to_q(x) x: (BS,320,8,64)
+        context = default(context, x)  # (BS,320,10) or (BS,320,8,64)
         
-        k = self.to_k(context)
-        v = self.to_v(context)
+        k = self.to_k(context) # (BS,320,10) or (BS,320,8,64)
+        v = self.to_v(context) # (BS,320,10) or (BS,320,8,64)
         
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (q, k, v))
-        
+        q: #(BS,320,8,64) : (BS,320,8*64) 
         sim = einsum('b i d, b j d -> b i j', q, k) * self.scale
         
         if exists(mask):
@@ -194,7 +194,7 @@ class CrossAttention(nn.Module):
         attn = sim.softmax(dim=-1)
 
         out = einsum('b i j, b j d -> b i d', attn, v)
-        out = rearrange(out, '(b h) n d -> b n (h d)', h=h)
+        out = rearrange(out, '(b h) n d -> b n (h d)', h=h) #  (BS,320,8*64) : (BS,320,8,64)
         return self.to_out(out)
         
         
